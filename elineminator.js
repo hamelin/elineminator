@@ -53,7 +53,7 @@ const palette = {
         set() {
             palette.text.set()
             fill(this.color())
-            textFont("monospace", 0.55 * unit)
+            textFont("monospace", 0.6 * unit)
         },
     },
 }
@@ -92,33 +92,48 @@ const screen = {
     drawQueue() {
         textAlign(LEFT, TOP)
         palette.container.set()
-        rect(11.25 * unit, 0.25 * unit, 4 * unit, 12 * unit, .25 * unit)
+        rect(11 * unit, 0.25 * unit, 4.5 * unit, 11 * unit, .25 * unit)
         palette.text.set()
-        text("Queue", 11.5 * unit, 0.6 * unit)
+        text("Queue", 11.25 * unit, 0.6 * unit)
+        fill(colors.blue_royal())
+        noStroke()
+        for (const [n, shape] of [[0, blocks.zee_l], [1, blocks.ell_l], [2, blocks.zee_r]]) {
+            push()
+            translate(11.25 * unit, (1.5 + n * 3.25) * unit)
+            scale(unit, unit)
+            // rect(0, 0, 1, 1)
+
+            shape.draw()
+            pop()
+        }
     },
 
     drawScore() {
         palette.container.set()
-        rect(11.25 * unit, 12.75 * unit, 4 * unit, 2.5 * unit, .25 * unit)
+        rect(11 * unit, 11.5 * unit, 4.5 * unit, 2.5 * unit, .25 * unit)
         palette.text.set()
-        text("Score", 11.5 * unit, 13.1 * unit)
+        text("Score", 11.25 * unit, 11.8 * unit)
         textAlign(RIGHT, TOP)
         palette.score.set()
-        text("999,999,999", 15 * unit, 14 * unit)
+        text("999,999,999", 15.25 * unit, 12.75 * unit)
     },
 
-    drawSquare(color, texture, row, column) {
-        fill(color)
-        stroke(palette.square.edge())
-        strokeWeight(palette.square.weight())
+    drawSquareInWell(color, texture, row, column) {
         push()
         translate((0.5 + column) * unit, (0.5 + row) * unit)
         scale(1 * unit, 1 * unit)
+        this.drawSquare(color, texture)
+        pop()
+    },
+
+    drawSquare(color, texture) {
+        fill(color)
+        stroke(palette.square.edge())
+        strokeWeight(palette.square.weight())
         rect(0, 0, 1, 1)
         fill(colors.white())
         stroke(colors.white())
         texture()
-        pop()
     }
 }
 
@@ -137,17 +152,19 @@ const textures = {
         rect(.25, .25, .5, .5, .1)
     },
     diamond() {
-        line(.25, .5, .5, .25)
-        line(.5, .25, .75, .5)
-        line(.75, .5, .5, .75)
-        line(.5, .75, .25, .5)
+        line(.15, .5, .5, .15)
+        line(.5, .15, .85, .5)
+        line(.85, .5, .5, .85)
+        line(.5, .85, .15, .5)
+        noFill()
+        rect(.25, .25, .5, .5)
     },
     circross() {
         noFill()
-        arc(.15, .15, .7, .7, 0, HALF_PI)
-        arc(.85, .15, .7, .7, HALF_PI, PI)
-        arc(.85, .85, .7, .7, PI, PI + HALF_PI)
-        arc(.15, .85, .7, .7, PI + HALF_PI, 2 * PI)
+        arc(.15, .15, .85, .85, 0, HALF_PI)
+        arc(.85, .15, .85, .85, HALF_PI, PI)
+        arc(.85, .85, .85, .85, PI, PI + HALF_PI)
+        arc(.15, .85, .85, .85, PI + HALF_PI, 2 * PI)
     },
     dither() {
         for (const x of [.1, .3, .5, .7]) {
@@ -176,6 +193,136 @@ const textures = {
 }
 
 
+const Block = {
+    drawSquare() {
+        screen.drawSquare(this.color(), this.texture)
+    },
+
+    draw31(n) {
+        for (const x of [0, 1, 2]) {
+            push()
+            translate(x + .5, .5)
+            this.drawSquare()
+            pop()
+        }
+        translate(.5 + n, 1.5)
+        this.drawSquare()
+    },
+
+    draw22(offset) {
+        var offset_ = offset
+        for (const y of [0, 1]) {
+            for (const x of [0, 1]) {
+                push()
+                translate(.5 + offset_ + x, .5 + y)
+                this.drawSquare()
+                pop()
+            }
+            offset_ = (offset_ + 1) & 1
+        }
+    }
+}
+
+
+const blocks = {
+    bar: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.yellow,
+            texture: textures.dither,
+
+            draw() {
+                for (const n of [0, 1, 2, 3]) {
+                    push()
+                    translate(n, 1)
+                    this.drawSquare()
+                    pop()
+                }
+            },
+        }
+    ),
+
+    square: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.blue_sky,
+            texture: textures.rainbow,
+
+            draw() {
+                for (const m of [1, 2]) {
+                    for (const n of [1, 2]) {
+                        push()
+                        translate(m, n - .5)
+                        this.drawSquare()
+                        pop()
+                    }
+                }
+            },
+        }
+    ),
+
+    tee: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.green,
+            texture: textures.arrow,
+
+            draw() {
+                this.draw31(1)
+            },
+        }
+    ),
+
+    ell_r: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.orange,
+            texture: textures.diamond,
+
+            draw() {
+                this.draw31(2)
+            },
+        }
+    ),
+
+    ell_l: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.red,
+            texture: textures.minisquare,
+
+            draw() {
+                this.draw31(0)
+            },
+        }
+    ),
+
+    zee_r: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.blue_royal,
+            texture: textures.circross,
+
+            draw() {
+                this.draw22(1)
+            },
+        }
+    ),
+
+    zee_l: Object.assign(
+        Object.create(Block),
+        {
+            color: colors.pink,
+            texture: textures.x,
+
+            draw() {
+                this.draw22(0)
+            },
+        }
+    ),
+}
+
+
 function draw() {
     screen.setUp()
     screen.drawWell()
@@ -201,12 +348,12 @@ function draw() {
         textures.arrow,
         textures.rainbow,
     ]
-    for (var row = 0; row < 20; row++) {
-        for (var column = 0; column < 10; column++) {
+    for (var row = 0; row < colors_.length; row++) {
+        for (var column = 0; column < textures_.length; column++) {
             const n = row * 10 + column
-            screen.drawSquare(
-                colors_[n % colors_.length],
-                textures_[n % textures_.length],
+            screen.drawSquareInWell(
+                colors_[row],
+                textures_[column],
                 row,
                 column
             )
