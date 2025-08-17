@@ -1,9 +1,3 @@
-function setup() {
-    createCanvas(windowWidth, windowHeight)
-    // console.log(`${windowWidth} ${windowHeight}`)
-}
-
-
 const unit = 10
 
 const colors = {
@@ -66,7 +60,7 @@ const screen = {
         return this.height() / this.width()
     },
 
-    setUp() {
+    clear() {
         palette.background()
         const aspectRatioActual = windowHeight / windowWidth
         if (aspectRatioActual > this.aspectRatio()) {
@@ -84,11 +78,6 @@ const screen = {
         }
     },
 
-    drawWell() {
-        palette.container.set()
-        rect(0.25 * unit, 0.25 * unit, 10.5 * unit, 20.5 * unit, .25 * unit)
-    },
-
     drawQueue() {
         textAlign(LEFT, TOP)
         palette.container.set()
@@ -101,8 +90,6 @@ const screen = {
             push()
             translate(11.25 * unit, (1.5 + n * 3.25) * unit)
             scale(unit, unit)
-            // rect(0, 0, 1, 1)
-
             shape.draw()
             pop()
         }
@@ -194,6 +181,12 @@ const textures = {
 
 
 const Block = {
+    indexTiling: 0,
+    
+    tiling() {
+        return this.tilings[this.indexTiling]
+    },
+
     drawSquare() {
         screen.drawSquare(this.color(), this.texture)
     },
@@ -220,7 +213,11 @@ const Block = {
             }
             offset_ = (offset_ + 1) & 1
         }
-    }
+    },
+
+    makeCell() {
+        return Cell.make(this.color, this.texture)
+    },
 }
 
 
@@ -230,6 +227,12 @@ const blocks = {
         {
             color: colors.yellow,
             texture: textures.dither,
+            tilings: [
+                [[-2, 0], [-1, 0], [0, 0], [1, 0]],
+                [[0, 2], [0, 1], [0, 0], [0, -1]],
+                [[-1, 0], [0, 0], [1, 0], [2, 0]],
+                [[0, -2], [0, -1], [0, 0], [0, 1]],
+            ],
 
             draw() {
                 for (const n of [0, 1, 2, 3]) {
@@ -239,6 +242,12 @@ const blocks = {
                     pop()
                 }
             },
+
+            drop() {
+                for (const i of [3, 4, 5, 6]) {
+                    well.cells[19][i] = this.makeCell()
+                }
+            }
         }
     ),
 
@@ -247,6 +256,12 @@ const blocks = {
         {
             color: colors.blue_sky,
             texture: textures.rainbow,
+            tilings: [
+                [[-1, 0], [-1, -1], [0, 0], [0, -1]],
+                [[-1, 0], [-1, -1], [0, 0], [0, -1]],
+                [[-1, 0], [-1, -1], [0, 0], [0, -1]],
+                [[-1, 0], [-1, -1], [0, 0], [0, -1]],
+            ],
 
             draw() {
                 for (const m of [1, 2]) {
@@ -266,6 +281,12 @@ const blocks = {
         {
             color: colors.green,
             texture: textures.arrow,
+            tilings: [
+                [[-1, 0], [0, 0], [1, 0], [0, -1]],
+                [[0, -1], [0, 0], [0, 1], [-1, 0]],
+                [[-1, 0], [0, 0], [1, 0], [0, 1]],
+                [[0, -1], [0, 0], [0, 1], [1, 0]],
+            ],
 
             draw() {
                 this.draw31(1)
@@ -278,6 +299,12 @@ const blocks = {
         {
             color: colors.orange,
             texture: textures.diamond,
+            tilings: [
+                [[-1, 0], [0, 0], [1, 0], [1, -1]],
+                [[0, 1], [0, 0], [0, -1], [-1, -1]],
+                [[-1, 0], [0, 0], [1, 0], [-1, 1]],
+                [[0, 1], [0, 0], [0, -1], [1, 1]],
+            ],
 
             draw() {
                 this.draw31(2)
@@ -290,6 +317,12 @@ const blocks = {
         {
             color: colors.red,
             texture: textures.minisquare,
+            tilings: [
+                [[-1, 0], [0, 0], [1, 0], [-1, -1]],
+                [[0, 1], [0, 0], [0, -1], [-1, 1]],
+                [[-1, 0], [0, 0], [1, 0], [1, 1]],
+                [[0, 1], [0, 0], [0, -1], [1, -1]],
+            ],
 
             draw() {
                 this.draw31(0)
@@ -302,6 +335,12 @@ const blocks = {
         {
             color: colors.blue_royal,
             texture: textures.circross,
+            tilings: [
+                [[-1, -1], [0, -1], [0, 0], [1, 0]],
+                [[-1, 1], [-1, 0], [0, 0], [0, -1]],
+                [[-1, -1], [0, -1], [0, 0], [1, 0]],
+                [[-1, 1], [-1, 0], [0, 0], [0, -1]],
+            ],
 
             draw() {
                 this.draw22(1)
@@ -314,6 +353,12 @@ const blocks = {
         {
             color: colors.pink,
             texture: textures.x,
+            tilings: [
+                [[-1, 0], [0, 0], [0, -1], [1, -1]],
+                [[0, 1], [0, 0], [-1, 0], [-1, -1]],
+                [[-1, 0], [0, 0], [0, -1], [1, -1]],
+                [[0, 1], [0, 0], [-1, 0], [-1, -1]],
+            ],
 
             draw() {
                 this.draw22(0)
@@ -323,40 +368,119 @@ const blocks = {
 }
 
 
+const Cell = {
+    make(c, t) {
+        return Object.assign(
+            Object.create(this),
+            {color: c, texture: t}
+        )
+    },
+
+    empty() {
+        return this.make(null, null)
+    },
+
+    draw() {
+        if (this.color) {
+            screen.drawSquare(this.color(), this.texture)
+        }
+    }
+}
+
+
+const well = {
+    cells: [],
+    dropping: {
+        block: null,
+        position: null,
+    },
+
+    setUp() {
+        this.cells = []
+        for (var i = 0; i < 24; i++) {
+            const row = []
+            for (var j = 0; j < 10; j++) {
+                row.push(Cell.empty())
+            }
+            this.cells.push(row)
+        }
+    },
+
+    drop(block) {
+        this.dropping = {
+            block: Object.create(block),
+            position: [5, 19],
+        }
+        this._printBlock(true)
+    },
+
+    _printBlock(positive) {
+        if (positive) {
+            makeCell = () => { return this.dropping.block.makeCell() }
+        }
+        else {
+            makeCell = () => { return Cell.empty() }
+        }
+        for (const offset of this.dropping.block.tiling()) {
+            const [col, row] = this.dropping.position
+            const [dc, dr] = offset
+            this.cells[row + dr][col + dc] = makeCell()
+        }
+    },
+
+    draw() {
+        palette.container.set()
+        rect(0.25 * unit, 0.25 * unit, 10.5 * unit, 20.5 * unit, .25 * unit)
+        push()
+        translate(.5 * unit, .5 * unit)
+        scale(unit, unit)
+        translate(0, 19)
+        for (const i in this.cells) {
+            push()
+            for (const j in this.cells[i]) {
+                this.cells[i][j].draw()
+                translate(1, 0)
+            }
+            pop()
+            translate(0, -1)
+        }
+        pop()
+    },
+
+    down() {
+        if (this.dropping.position && this.dropping.block) {
+            this._printBlock(false)
+            this.dropping.position[1] -= 1
+            this._printBlock(true)
+        }
+    },
+}
+
+
+function setup() {
+    createCanvas(windowWidth, windowHeight)
+    well.setUp()
+    // well.cells[0][0] = Cell.make(colors.yellow, textures.dither)
+    // well.cells[0][9] = Cell.make(colors.blue_sky, textures.x)
+    // well.cells[1][1] = Cell.make(colors.red, textures.circross)
+    // well.cells[19][0] = Cell.make(colors.orange, textures.diamond)
+    // well.cells[19][9] = Cell.make(colors.pink, textures.plain)
+    well.drop(blocks.bar)
+}
+
+
 function draw() {
-    screen.setUp()
-    screen.drawWell()
+    screen.clear()
+    well.draw()
     screen.drawQueue()
     screen.drawScore()
+}
 
-    const colors_ = [
-        colors.green(),
-        colors.blue_royal(),
-        colors.blue_sky(),
-        colors.yellow(),
-        colors.orange(),
-        colors.red(),
-        colors.pink()
-    ]
-    const textures_ = [
-        textures.plain,
-        textures.x,
-        textures.minisquare,
-        textures.diamond,
-        textures.circross,
-        textures.dither,
-        textures.arrow,
-        textures.rainbow,
-    ]
-    for (var row = 0; row < colors_.length; row++) {
-        for (var column = 0; column < textures_.length; column++) {
-            const n = row * 10 + column
-            screen.drawSquareInWell(
-                colors_[row],
-                textures_[column],
-                row,
-                column
-            )
-        }
+
+function keyPressed() {
+    switch (keyCode) {
+        case DOWN_ARROW:
+            well.down()
+            return false
     }
 }
